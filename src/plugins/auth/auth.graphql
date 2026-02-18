@@ -1,0 +1,52 @@
+extend type Mutation {
+  customLogin(email: String!, password: String!): LoginResult!
+  customLogout: LogoutResult!
+  customRegister(input: RegisterInput!): RegisterResult!
+}
+
+extend type Query {
+  customMe: CustomCurrentUser
+}
+
+input RegisterInput {
+  email: String!
+  password: String!
+  firstName: String
+  lastName: String
+}
+
+type LoginResult {
+  id: ID
+  identifier: String
+  token: String
+  errorCode: String
+  message: String
+}
+
+type RegisterResult {
+  id: ID
+  identifier: String
+  errorCode: String
+  message: String
+}
+
+type LogoutResult {
+  success: Boolean!
+  message: String!
+}
+
+# type CurrentUser {
+#   id: ID!
+#   identifier: String!
+#   firstName: String
+#   lastName: String
+#   emailAddress: String
+# }
+
+type CustomCurrentUser {
+  id: ID!
+  identifier: String!
+  firstName: String
+  lastName: String
+  emailAddress: String
+}
