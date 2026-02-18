@@ -220,8 +220,4 @@ export class AuthService {
   }
 }
 
-// Practice push code only change content
-
-// Change Seconds
-
-// Change one file will check in frist Service
+// Test Push multiple file
