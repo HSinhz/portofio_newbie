@@ -1,41 +1,25 @@
-// src/plugins/cart/cart.resolver.ts
+// src/plugins/cart-plugin/cart.resolver.ts
 import { Args, Mutation, Resolver } from "@nestjs/graphql";
-import { Ctx, RequestContext, Transaction, ID } from "@vendure/core";
-import { OrderService } from "@vendure/core";
+import { Ctx, RequestContext, Transaction } from "@vendure/core";
+import { CartService } from "./cart.service";
 
 @Resolver()
 export class CartResolver {
-  constructor(private orderService: OrderService) {}
+  constructor(private cartService: CartService) {}
 
   @Transaction()
   @Mutation()
-  async addItemToOrder(
+  async customAddItemToOrder(
     @Ctx() ctx: RequestContext,
     @Args() args: { productVariantId: string; quantity: number },
   ) {
-    console.log("🔥 Backend received:", args);
-    console.log("👤 User:", ctx.activeUserId);
 
-    // ✅ Lấy hoặc tạo active order
-    let orderId: ID;
+    console.log("resolver call frist");
 
-    if (ctx.session?.activeOrderId) {
-      orderId = ctx.session.activeOrderId;
-    } else {
-      // Tạo order mới nếu chưa có
-      const newOrder = await this.orderService.create(ctx, ctx.activeUserId);
-      orderId = newOrder.id;
-    }
-
-    // Thêm item vào order
-    const order = await this.orderService.addItemToOrder(
+    return this.cartService.addItemToOrder(
       ctx,
-      orderId,
       args.productVariantId,
       args.quantity,
     );
-
-    console.log("✅ Order updated:", order);
-    return order;
   }
 }

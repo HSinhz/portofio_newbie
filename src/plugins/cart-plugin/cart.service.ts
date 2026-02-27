@@ -5,10 +5,11 @@ import {
   OrderService,
   EntityHydrator,
   Order,
-  TransactionalConnection,
   ID,
   isGraphQlErrorResult,
+  TransactionalConnection,
 } from "@vendure/core";
+import { jwtService } from "../../services/jwt.service";
 
 @Injectable()
 export class CartService {
@@ -18,45 +19,70 @@ export class CartService {
     private connection: TransactionalConnection,
   ) {}
 
-  /**
-   * Lấy hoặc tạo active order cho user hiện tại
-   */
+  // ✅ Đọc từ cookie auth_token (giống AuthResolver)
+  private getUserIdFromRequest(ctx: RequestContext): ID | null {
+    // Thử Authorization header trước
+    const authHeader = ctx.req?.headers?.authorization;
+    if (authHeader?.startsWith("Bearer ")) {
+      const token = authHeader.substring(7);
+      const payload = jwtService.verifyToken(token);
+      if (payload?.userId) return payload.userId;
+    }
+
+    // ✅ Fallback: đọc từ cookie auth_token
+    const cookieHeader = ctx.req?.headers?.cookie;
+    if (cookieHeader) {
+      const cookies = cookieHeader.split(";").reduce(
+        (acc, cookie) => {
+          const [key, value] = cookie.trim().split("=");
+          if (key && value) acc[key] = decodeURIComponent(value);
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
+
+      const token = cookies["auth_token"];
+      if (token) {
+        const payload = jwtService.verifyToken(token);
+        // console.log("🔍 JWT payload from cookie:", payload);
+        if (payload?.userId) return payload.userId;
+      }
+    }
+
+    return null;
+  }
+
   async getOrCreateActiveOrder(ctx: RequestContext): Promise<Order> {
-    if (!ctx.activeUserId) {
+    const userId = ctx.activeUserId || this.getUserIdFromRequest(ctx);
+
+    // console.log("👤 activeUserId:", ctx.activeUserId);
+    // console.log("👤 userId from JWT:", this.getUserIdFromRequest(ctx));
+
+    if (!userId) {
       throw new Error("User must be authenticated");
     }
 
-    // Lấy active order của user
-    let order = await this.orderService.getActiveOrderForUser(
-      ctx,
-      ctx.activeUserId,
-    );
+    let order = await this.orderService.getActiveOrderForUser(ctx, userId);
 
-    // Nếu chưa có order, tạo mới
     if (!order) {
-      order = await this.orderService.create(ctx, ctx.activeUserId);
+      order = await this.orderService.create(ctx, userId);
     }
 
     return order;
   }
 
-  /**
-   * Thêm item vào order
-   */
   async addItemToOrder(
     ctx: RequestContext,
     productVariantId: ID,
     quantity: number,
   ): Promise<Order> {
-    // Validate quantity
     if (quantity < 1) {
       throw new Error("Quantity must be at least 1");
     }
 
-    // Lấy hoặc tạo order
+    console.log("service call second");
     const order = await this.getOrCreateActiveOrder(ctx);
 
-    // Thêm item vào order
     const result = await this.orderService.addItemToOrder(
       ctx,
       order.id,
@@ -64,16 +90,11 @@ export class CartService {
       quantity,
     );
 
-    // ✅ CHECK ERROR RESULT
     if (isGraphQlErrorResult(result)) {
       throw new Error(result.message);
     }
 
-    // ✅ Bây giờ TypeScript biết result là Order
-    const updatedOrder = result;
-
-    // Hydrate các relations để trả về đầy đủ data cho frontend
-    await this.entityHydrator.hydrate(ctx, updatedOrder, {
+    await this.entityHydrator.hydrate(ctx, result, {
       relations: [
         "lines",
         "lines.productVariant",
@@ -83,6 +104,6 @@ export class CartService {
       ],
     });
 
-    return updatedOrder;
+    return result;
   }
 }

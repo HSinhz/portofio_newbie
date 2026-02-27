@@ -26,10 +26,10 @@ export class AuthService {
     email: string,
     password: string,
   ): Promise<User | null> {
-    console.log("🔍 Authenticating user:", email);
+    // console.log("🔍 Authenticating user:", email);
 
     if (!email || !password) {
-      console.log("❌ Email or password is empty");
+      // console.log("❌ Email or password is empty");
       return null;
     }
 
@@ -44,11 +44,11 @@ export class AuthService {
       });
 
       if (!user) {
-        console.log("❌ User not found with email:", email);
+        // console.log("❌ User not found with email:", email);
         return null;
       }
 
-      console.log("✅ User found:", user.id);
+      // console.log("✅ User found:", user.id);
 
       // ✅ 2. Query NativeAuthenticationMethod với SELECT passwordHash
       const nativeAuthMethod = await this.connection
@@ -58,7 +58,7 @@ export class AuthService {
         .where("auth.userId = :userId", { userId: user.id })
         .getOne();
 
-      console.log("🔑 Auth method found:", nativeAuthMethod ? "Yes" : "No");
+      // console.log("🔑 Auth method found:", nativeAuthMethod ? "Yes" : "No");
 
       if (!nativeAuthMethod) {
         console.log("❌ No native auth method found for user");
@@ -68,10 +68,10 @@ export class AuthService {
       console.log("🔐 Has password hash:", !!nativeAuthMethod.passwordHash);
 
       if (nativeAuthMethod.passwordHash) {
-        console.log(
-          "🔐 Password hash preview:",
-          nativeAuthMethod.passwordHash.substring(0, 10) + "...",
-        );
+        // console.log(
+        //   "🔐 Password hash preview:",
+        //   nativeAuthMethod.passwordHash.substring(0, 10) + "...",
+        // );
       }
 
       if (!nativeAuthMethod.passwordHash) {
@@ -80,20 +80,20 @@ export class AuthService {
       }
 
       // ✅ 3. Verify password
-      console.log("🔐 Verifying password...");
+      // console.log("🔐 Verifying password...");
       const isValid = await bcrypt.compare(
         password,
         nativeAuthMethod.passwordHash,
       );
 
-      console.log("🔐 Password valid:", isValid);
+      // console.log("🔐 Password valid:", isValid);
 
       if (!isValid) {
         console.log("❌ Invalid password");
         return null;
       }
 
-      console.log("✅ Login successful");
+      // console.log("✅ Login successful");
       return user;
     } catch (error) {
       console.error("❌ Authentication error:", error);
@@ -104,7 +104,7 @@ export class AuthService {
     ctx: RequestContext,
     input: RegisterInput,
   ): Promise<User | { errorCode: string; message: string }> {
-    console.log("📝 Registering new user:", input.email);
+    // console.log("📝 Registering new user:", input.email);
 
     // ✅ Validate inputs
     if (!input.email || !input.password) {

@@ -47,7 +47,7 @@ export class AuthResolver {
     @Args("email") email: string,
     @Args("password") password: string,
   ) {
-    console.log("🔐 customLogin called:", { email });
+    // console.log("🔐 customLogin called:", { email });
 
     try {
       const user = await this.authService.authenticate(ctx, email, password);
@@ -80,10 +80,10 @@ export class AuthResolver {
           maxAge: 7 * 24 * 60 * 60 * 1000,
           path: "/",
         });
-        console.log("✅ JWT cookie set");
+        // console.log("✅ JWT cookie set");
       }
 
-      console.log("✅ Login successful");
+      // console.log("✅ Login successful");
 
       return {
         id: user.id,
@@ -102,20 +102,20 @@ export class AuthResolver {
   @Query()
   @Allow(Permission.Public)
   async customMe(@Ctx() ctx: RequestContext) {
-    console.log("👤 customMe called");
+    // console.log("👤 customMe called");
 
     // ✅ Parse cookies manually từ header
     const cookieHeader = ctx.req?.headers?.cookie;
-    console.log("🍪 Raw cookie header:", cookieHeader);
+    // console.log("🍪 Raw cookie header:", cookieHeader);
 
     const cookies = this.parseCookies(cookieHeader);
-    console.log("🔍 Parsed cookies:", Object.keys(cookies));
+    // console.log("🔍 Parsed cookies:", Object.keys(cookies));
 
     const token = cookies["auth_token"];
-    console.log("🍪 JWT token:", token ? "exists" : "missing");
+    // console.log("🍪 JWT token:", token ? "exists" : "missing");
 
     if (!token) {
-      console.log("❌ No JWT token");
+      // console.log("❌ No JWT token");
       return null;
     }
 
@@ -123,7 +123,7 @@ export class AuthResolver {
     const payload = jwtService.verifyToken(token);
 
     if (!payload) {
-      console.log("❌ Invalid or expired JWT token");
+      // console.log("❌ Invalid or expired JWT token");
 
       // ✅ XÓA cookie đã hết hạn
       if (ctx.req?.res) {
@@ -134,14 +134,14 @@ export class AuthResolver {
           sameSite: "lax",
           path: "/",
         });
-        console.log("🗑️ Expired cookie cleared");
+        // console.log("🗑️ Expired cookie cleared");
       }
 
       return null;
     }
 
     const userId = parseInt(payload.userId);
-    console.log("✅ User ID from JWT:", userId);
+    // console.log("✅ User ID from JWT:", userId);
 
     try {
       const user = await this.connection.getRepository(ctx, User).findOne({
@@ -159,7 +159,7 @@ export class AuthResolver {
           where: { user: { id: user.id } },
         });
 
-      console.log("✅ User loaded:", user.identifier);
+      // console.log("✅ User loaded:", user.identifier);
 
       return {
         id: user.id,
@@ -185,7 +185,7 @@ export class AuthResolver {
         sameSite: "lax",
         path: "/",
       });
-      console.log("✅ JWT cookie cleared");
+      // console.log("✅ JWT cookie cleared");
     }
 
     return {
@@ -197,7 +197,7 @@ export class AuthResolver {
   @Mutation()
   @Allow(Permission.Public)
   async customRegister(@Ctx() ctx: RequestContext, @Args("input") input: any) {
-    console.log("📝 customRegister called:", input.email);
+    // console.log("📝 customRegister called:", input.email);
 
     try {
       const result = await this.authService.register(ctx, input);
@@ -220,5 +220,4 @@ export class AuthResolver {
   }
 }
 
-
-// Test Push multiple file 
+// Test Push multiple file

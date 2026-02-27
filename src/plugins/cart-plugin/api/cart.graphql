@@ -1,0 +1,4 @@
+# src/plugins/cart-plugin/api/cart.graphql
+extend type Mutation {
+  customAddItemToOrder(productVariantId: ID!, quantity: Int!): Order!
+}

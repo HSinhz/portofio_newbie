@@ -2,13 +2,20 @@
 import { PluginCommonModule, VendurePlugin } from "@vendure/core";
 import { CartResolver } from "./cart.resolver";
 import { CartService } from "./cart.service";
-import { shopApiExtensions } from "./api/api-extensions";
+import { gql } from "graphql-tag";
+import { readFileSync } from "fs";
+import path from "path";
+
+const schemaFile = readFileSync(
+  path.join(__dirname, "api/cart.graphql"),
+  "utf-8",
+);
 
 @VendurePlugin({
   imports: [PluginCommonModule],
   providers: [CartService],
   shopApiExtensions: {
-    schema: shopApiExtensions,
+    schema: gql(schemaFile),
     resolvers: [CartResolver],
   },
   compatibility: "^3.0.0",
