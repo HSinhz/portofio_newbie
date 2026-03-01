@@ -19,6 +19,7 @@ import { AuthDebugPlugin } from "./plugins/auth/auth-debug.plugin";
 import { CustomAuthPlugin } from "./plugins/auth/custom-auth.plugin";
 import { AuthPlugin } from "./plugins/auth/auth.plugin";
 import { CartPlugin } from "./plugins/cart-plugin/cart.plugin";
+import { PaymentPlugin } from "./plugins/payment/payment.plugin";
 import "dotenv/config";
 import path from "path";
 // import * as cookieParser from "cookie-parser";
@@ -170,6 +171,7 @@ export const config: VendureConfig = {
     AuthPlugin,
     LoggerPlugin,
     CartPlugin,
+    PaymentPlugin,
     // CustomAuthPlugin,
   ],
 };

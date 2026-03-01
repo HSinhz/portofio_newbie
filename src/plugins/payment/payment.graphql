@@ -1,0 +1,29 @@
+# =============================================
+# PAYMENT PLUGIN - GraphQL Schema Extension
+# Mở rộng Shop API với mutation đặt hàng
+# =============================================
+
+extend type Mutation {
+  customPlaceOrder(input: PlaceOrderInput!): PlaceOrderResult!
+}
+
+# Input cho mutation đặt hàng
+input PlaceOrderInput {
+  # Thông tin người nhận
+  fullName: String!
+  phoneNumber: String!
+  streetLine1: String!
+  city: String!
+
+  # Phương thức thanh toán: "cod" | "momo" | "card" | "bank"
+  paymentMethod: String!
+}
+
+# Kết quả trả về sau khi đặt hàng
+type PlaceOrderResult {
+  success: Boolean!
+  orderId: ID
+  orderCode: String
+  orderState: String
+  message: String!
+}

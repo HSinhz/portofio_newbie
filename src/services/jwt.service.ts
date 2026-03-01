@@ -13,13 +13,13 @@ export class JWTService {
 
   constructor() {
     this.secret = process.env.JWT_SECRET || "your-secret-key-change-this";
-    this.expiresIn = "5m";
+    this.expiresIn = "30m";
     // this.expiresIn = process.env.JWT_EXPIRES_IN || "7d";
 
     // ✅ Log để kiểm tra
-    console.log("🔐 JWT Config:");
-    console.log("  - Secret:", this.secret ? "✅ Set" : "❌ Missing");
-    console.log("  - ExpiresIn:", this.expiresIn);
+    // console.log("🔐 JWT Config:");
+    // console.log("  - Secret:", this.secret ? "✅ Set" : "❌ Missing");
+    // console.log("  - ExpiresIn:", this.expiresIn);
   }
 
   /**
@@ -45,7 +45,7 @@ export class JWTService {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
-      console.error("❌ JWT verification failed:", errorMessage);
+      // console.error("❌ JWT verification failed:", errorMessage);
       return null;
     }
   }
