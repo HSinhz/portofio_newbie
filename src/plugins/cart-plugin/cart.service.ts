@@ -70,15 +70,24 @@ export class CartService {
   ): Promise<Customer> {
     const customerRepo = this.connection.getRepository(ctx, Customer);
 
-    // Tìm Customer có user.id = userId (join qua relation)
+    // userId từ JWT là string ("42"), DB lưu numeric bigint → phải parseInt
+    const numericId = parseInt(String(userId), 10);
+    if (isNaN(numericId)) {
+      throw new Error(`userId không hợp lệ: ${userId}`);
+    }
+
+    console.log(`🔍 [CartService] userId raw="${userId}" → numeric=${numericId}`);
+
     const customer = await customerRepo.findOne({
-      where: { user: { id: userId as any } },
+      where: { user: { id: numericId as any } },
     });
 
     if (!customer) {
+      console.log(`❌ [CartService] No customer for userId=${numericId}`);
       throw new Error("Không tìm thấy thông tin khách hàng cho tài khoản này");
     }
 
+    console.log(`✅ [CartService] Found customer id=${customer.id} (${customer.emailAddress})`);
     return customer;
   }
 

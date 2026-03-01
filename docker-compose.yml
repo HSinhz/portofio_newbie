@@ -46,6 +46,20 @@ services:
         labels:
             - "io.vendure.create.name=mason-shop-back"
 
+    pgadmin:
+        image: dpage/pgadmin4:latest
+        environment:
+            PGADMIN_DEFAULT_EMAIL: admin@admin.com
+            PGADMIN_DEFAULT_PASSWORD: admin
+        ports:
+            - "5050:80"
+        volumes:
+            - pgadmin_data:/var/lib/pgadmin
+        depends_on:
+            - postgres_db
+        labels:
+            - "io.vendure.create.name=mason-shop-back"
+
     # RECOMMENDED (especially for production)
     # Want to use our BullMQ with Redis instead of our default database job queue?
     # Checkout our BullMQ plugin: https://docs.vendure.io/reference/core-plugins/job-queue-plugin/bull-mqjob-queue-plugin/
@@ -110,6 +124,10 @@ volumes:
         labels:
             - "io.vendure.create.name=mason-shop-back"
     redis_data:
+        driver: local
+        labels:
+            - "io.vendure.create.name=mason-shop-back"
+    pgadmin_data:
         driver: local
         labels:
             - "io.vendure.create.name=mason-shop-back"
