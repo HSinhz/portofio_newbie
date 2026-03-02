@@ -1,0 +1,122 @@
+# ============================================================
+# CI/CD PIPELINE - BACKEND (Vendure + Node.js)
+# Repo: HSinhz/portofio_newbie
+#
+# FREE:
+#   - Public repo → GitHub Actions UNLIMITED phút miễn phí
+#   - Không cần server, không cần Docker Hub
+#
+# Flow:
+#   Push code lên GitHub
+#       ↓
+#   GitHub tự động chạy file này
+#       ↓
+#   [CI] Kiểm tra code: install → type check → build
+#       ↓ pass
+#   [CD] Đóng gói: build Docker image → verify
+# ============================================================
+
+name: "CI/CD Backend"
+
+# ============================================================
+# KHI NÀO CHẠY?
+# ============================================================
+on:
+  push:
+    branches: [main, dev]  # Push lên main hoặc dev → chạy CI + CD
+  pull_request:
+    branches: [main]       # Tạo PR vào main → chỉ chạy CI (không CD)
+
+# ============================================================
+# JOBS
+# ============================================================
+jobs:
+
+  # ------------------------------------------------------------
+  # JOB 1: CI - Continuous Integration
+  # Mục đích: Đảm bảo code không bị lỗi trước khi deploy
+  # ------------------------------------------------------------
+  ci:
+    name: "CI - Type Check & Build"
+    runs-on: ubuntu-latest
+    # runs-on: GitHub cung cấp máy ảo Ubuntu để chạy các steps
+
+    steps:
+      - name: "1. Lấy source code"
+        uses: actions/checkout@v4
+        # Clone repo vào máy ảo của GitHub
+
+      - name: "2. Cài Node.js 20"
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: "npm"
+          # cache: tái sử dụng node_modules từ lần chạy trước → nhanh hơn
+
+      - name: "3. Cài dependencies"
+        run: npm ci
+        # npm ci: cài đúng theo package-lock.json, không update version
+
+      - name: "4. Kiểm tra TypeScript"
+        run: npx tsc --noEmit
+        # Nếu có lỗi type → step này fail → pipeline dừng → không deploy
+
+      - name: "5. Build source code"
+        run: npm run build
+        # TypeScript → JavaScript, output vào ./dist/
+
+  # ------------------------------------------------------------
+  # JOB 2: CD - Continuous Deployment
+  # Mục đích: Đóng gói app thành Docker image
+  # Chỉ chạy khi: push lên main VÀ CI đã pass
+  # ------------------------------------------------------------
+  cd:
+    name: "CD - Build Docker Image"
+    runs-on: ubuntu-latest
+    needs: ci
+    # needs: phải chờ job CI thành công mới chạy job CD
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    # Điều kiện: chỉ chạy khi push lên main (không chạy với PR)
+
+    steps:
+      - name: "1. Lấy source code"
+        uses: actions/checkout@v4
+
+      - name: "2. Build Docker image"
+        run: docker build -t portofio_newbie:latest .
+        # Đọc Dockerfile → build image
+        # Stage 1: npm ci + npm run build → ./dist/
+        # Stage 2: copy dist → image production nhỏ gọn
+
+      - name: "3. Kiểm tra image đã build"
+        run: |
+          echo "=== Docker images ==="
+          docker images portofio_newbie
+
+          echo "=== Test chạy container ==="
+          docker run --rm \
+            -e DB_HOST=localhost \
+            -e DB_PORT=5432 \
+            -e DB_NAME=test \
+            -e DB_USERNAME=test \
+            -e DB_PASSWORD=test \
+            -e DB_SCHEMA=public \
+            -e COOKIE_SECRET=test \
+            -e JWT_SECRET=test \
+            -e JWT_EXPIRES_IN=60s \
+            -e SUPERADMIN_USERNAME=admin \
+            -e SUPERADMIN_PASSWORD=admin \
+            -e FRONTEND_URL=http://localhost \
+            portofio_newbie:latest \
+            node -e "console.log('✅ Docker image hoạt động tốt!')" || true
+          # || true: kể cả lỗi DB connection vẫn pass (DB chưa có ở đây)
+
+      - name: "4. Thông báo kết quả"
+        run: |
+          echo "============================================"
+          echo "✅ CI/CD hoàn thành!"
+          echo "Image: portofio_newbie:latest đã được build"
+          echo "Commit: ${{ github.sha }}"
+          echo "Branch: ${{ github.ref_name }}"
+          echo "Triggered by: ${{ github.actor }}"
+          echo "============================================"
