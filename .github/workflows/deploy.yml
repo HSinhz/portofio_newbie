@@ -2,121 +2,93 @@
 # CI/CD PIPELINE - BACKEND (Vendure + Node.js)
 # Repo: HSinhz/portofio_newbie
 #
-# FREE:
-#   - Public repo → GitHub Actions UNLIMITED phút miễn phí
-#   - Không cần server, không cần Docker Hub
-#
 # Flow:
-#   Push code lên GitHub
-#       ↓
-#   GitHub tự động chạy file này
-#       ↓
-#   [CI] Kiểm tra code: install → type check → build
-#       ↓ pass
-#   [CD] Đóng gói: build Docker image → verify
+#   Push lên dev  → CI: Type Check + Build
+#   Push lên main → CI pass → CD: Build + Push Docker Hub
+#
+# Secrets cần thiết (Settings → Secrets → Actions):
+#   DOCKER_USERNAME : Docker Hub username
+#   DOCKER_PASSWORD : Docker Hub password hoặc Access Token
 # ============================================================
 
 name: "CI/CD Backend"
 
-# ============================================================
-# KHI NÀO CHẠY?
-# ============================================================
 on:
   push:
-    branches: [main, dev]  # Push lên main hoặc dev → chạy CI + CD
+    branches: [main, dev]
   pull_request:
-    branches: [main]       # Tạo PR vào main → chỉ chạy CI (không CD)
+    branches: [main]
 
-# ============================================================
-# JOBS
-# ============================================================
 jobs:
 
   # ------------------------------------------------------------
-  # JOB 1: CI - Continuous Integration
-  # Mục đích: Đảm bảo code không bị lỗi trước khi deploy
+  # JOB 1: CI - Kiểm tra code
+  # Chạy khi: push lên main hoặc dev, hoặc PR vào main
   # ------------------------------------------------------------
   ci:
     name: "CI - Type Check & Build"
     runs-on: ubuntu-latest
-    # runs-on: GitHub cung cấp máy ảo Ubuntu để chạy các steps
 
     steps:
       - name: "1. Lấy source code"
         uses: actions/checkout@v4
-        # Clone repo vào máy ảo của GitHub
 
       - name: "2. Cài Node.js 20"
         uses: actions/setup-node@v4
         with:
           node-version: "20"
           cache: "npm"
-          # cache: tái sử dụng node_modules từ lần chạy trước → nhanh hơn
 
       - name: "3. Cài dependencies"
         run: npm ci
-        # npm ci: cài đúng theo package-lock.json, không update version
 
       - name: "4. Kiểm tra TypeScript"
         run: npx tsc --noEmit
-        # Nếu có lỗi type → step này fail → pipeline dừng → không deploy
 
       - name: "5. Build source code"
         run: npm run build
-        # TypeScript → JavaScript, output vào ./dist/
 
   # ------------------------------------------------------------
-  # JOB 2: CD - Continuous Deployment
-  # Mục đích: Đóng gói app thành Docker image
+  # JOB 2: CD - Build & Push Docker image lên Docker Hub
   # Chỉ chạy khi: push lên main VÀ CI đã pass
   # ------------------------------------------------------------
   cd:
-    name: "CD - Build Docker Image"
+    name: "CD - Push Docker Hub"
     runs-on: ubuntu-latest
     needs: ci
-    # needs: phải chờ job CI thành công mới chạy job CD
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    # Điều kiện: chỉ chạy khi push lên main (không chạy với PR)
 
     steps:
       - name: "1. Lấy source code"
         uses: actions/checkout@v4
 
-      - name: "2. Build Docker image"
-        run: docker build -t portofio_newbie:latest .
-        # Đọc Dockerfile → build image
-        # Stage 1: npm ci + npm run build → ./dist/
-        # Stage 2: copy dist → image production nhỏ gọn
+      - name: "2. Login vào Docker Hub"
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: "3. Kiểm tra image đã build"
-        run: |
-          echo "=== Docker images ==="
-          docker images portofio_newbie
+      - name: "3. Thiết lập Docker Buildx"
+        uses: docker/setup-buildx-action@v3
 
-          echo "=== Test chạy container ==="
-          docker run --rm \
-            -e DB_HOST=localhost \
-            -e DB_PORT=5432 \
-            -e DB_NAME=test \
-            -e DB_USERNAME=test \
-            -e DB_PASSWORD=test \
-            -e DB_SCHEMA=public \
-            -e COOKIE_SECRET=test \
-            -e JWT_SECRET=test \
-            -e JWT_EXPIRES_IN=60s \
-            -e SUPERADMIN_USERNAME=admin \
-            -e SUPERADMIN_PASSWORD=admin \
-            -e FRONTEND_URL=http://localhost \
-            portofio_newbie:latest \
-            node -e "console.log('✅ Docker image hoạt động tốt!')" || true
-          # || true: kể cả lỗi DB connection vẫn pass (DB chưa có ở đây)
+      - name: "4. Build và Push image lên Docker Hub"
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.DOCKER_USERNAME }}/mason-shop-back:latest
+            ${{ secrets.DOCKER_USERNAME }}/mason-shop-back:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
-      - name: "4. Thông báo kết quả"
+      - name: "5. Thông báo kết quả"
         run: |
           echo "============================================"
-          echo "✅ CI/CD hoàn thành!"
-          echo "Image: portofio_newbie:latest đã được build"
+          echo "✅ CD Backend hoàn thành!"
+          echo "Image đã push lên Docker Hub:"
+          echo "  ${{ secrets.DOCKER_USERNAME }}/mason-shop-back:latest"
+          echo "  ${{ secrets.DOCKER_USERNAME }}/mason-shop-back:${{ github.sha }}"
           echo "Commit: ${{ github.sha }}"
-          echo "Branch: ${{ github.ref_name }}"
           echo "Triggered by: ${{ github.actor }}"
           echo "============================================"
