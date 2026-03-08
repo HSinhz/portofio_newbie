@@ -16,6 +16,12 @@ declare global {
             DB_USERNAME: string;
             DB_PASSWORD: string;
             DB_SCHEMA: string;
+            FRONTEND_URL: string;
+            JWT_SECRET: string;
+            JWT_EXPIRES_IN: string;
+            REDIS_HOST: string;
+            REDIS_PORT: string;
+            REDIS_PASSWORD?: string;
         }
     }
 }

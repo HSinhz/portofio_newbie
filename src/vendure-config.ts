@@ -20,6 +20,7 @@ import { CustomAuthPlugin } from "./plugins/auth/custom-auth.plugin";
 import { AuthPlugin } from "./plugins/auth/auth.plugin";
 import { CartPlugin } from "./plugins/cart-plugin/cart.plugin";
 import { PaymentPlugin } from "./plugins/payment/payment.plugin";
+import { ProductsCachePlugin } from "./plugins/products-cache/products-cache.plugin";
 import "dotenv/config";
 import path from "path";
 // import * as cookieParser from "cookie-parser";
@@ -172,6 +173,7 @@ export const config: VendureConfig = {
     LoggerPlugin,
     CartPlugin,
     PaymentPlugin,
+    ProductsCachePlugin, // ✅ Redis cache cho danh sách sản phẩm
     // CustomAuthPlugin,
   ],
 };

@@ -1,0 +1,32 @@
+# GraphQL schema extension cho products-cache plugin
+# Thêm query `cachedProducts` vào Shop API
+
+type CachedAsset {
+  source: String!
+}
+
+type CachedVariant {
+  id: ID!
+  price: Int!
+}
+
+type CachedProduct {
+  id: ID!
+  name: String!
+  description: String!
+  featuredAsset: CachedAsset
+  variants: [CachedVariant!]!
+}
+
+type CachedProductList {
+  totalItems: Int!
+  items: [CachedProduct!]!
+}
+
+extend type Query {
+  """
+  Trả về danh sách sản phẩm có hỗ trợ Redis cache.
+  Kết quả được cache trong 5 phút; key được xây dựng từ skip + take.
+  """
+  cachedProducts(skip: Int, take: Int): CachedProductList!
+}
