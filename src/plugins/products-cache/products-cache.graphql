@@ -3,18 +3,26 @@
 
 type CachedAsset {
   source: String!
+  preview: String
 }
 
 type CachedVariant {
   id: ID!
+  name: String
   price: Int!
+  sku: String
+  stockLevel: String
+  featuredAsset: CachedAsset
+  assets: [CachedAsset!]!
 }
 
 type CachedProduct {
   id: ID!
   name: String!
+  slug: String
   description: String!
   featuredAsset: CachedAsset
+  assets: [CachedAsset!]!
   variants: [CachedVariant!]!
 }
 

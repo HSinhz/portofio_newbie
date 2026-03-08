@@ -76,18 +76,20 @@ export class CartService {
       throw new Error(`userId không hợp lệ: ${userId}`);
     }
 
-    console.log(`🔍 [CartService] userId raw="${userId}" → numeric=${numericId}`);
+    // console.log(`🔍 [CartService] userId raw="${userId}" → numeric=${numericId}`);
 
     const customer = await customerRepo.findOne({
       where: { user: { id: numericId as any } },
     });
 
     if (!customer) {
-      console.log(`❌ [CartService] No customer for userId=${numericId}`);
+      // console.log(`❌ [CartService] No customer for userId=${numericId}`);
       throw new Error("Không tìm thấy thông tin khách hàng cho tài khoản này");
     }
 
-    console.log(`✅ [CartService] Found customer id=${customer.id} (${customer.emailAddress})`);
+    // console.log(
+    //   // `✅ [CartService] Found customer id=${customer.id} (${customer.emailAddress})`,
+    // );
     return customer;
   }
 
@@ -121,7 +123,9 @@ export class CartService {
     });
 
     if (existingOrder) {
-      console.log(`🛒 [CartService] Found existing order: ${existingOrder.code}`);
+      console.log(
+        `🛒 [CartService] Found existing order: ${existingOrder.code}`,
+      );
       return existingOrder;
     }
 
@@ -292,7 +296,9 @@ export class CartService {
       });
 
       await orderLineRepo.save(newLine);
-      console.log(`➕ [CartService] Created new order line for variant: ${variant.sku}`);
+      console.log(
+        `➕ [CartService] Created new order line for variant: ${variant.sku}`,
+      );
     }
 
     // ── Bước 5: Tính lại subTotal của Order ────

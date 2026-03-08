@@ -109,10 +109,10 @@ export class AuthResolver {
     // console.log("🍪 Raw cookie header:", cookieHeader);
 
     const cookies = this.parseCookies(cookieHeader);
-    console.log("🔍 Parsed cookies:", Object.keys(cookies));
+    // console.log("🔍 Parsed cookies:", Object.keys(cookies));
 
     const token = cookies["auth_token"];
-    console.log("🍪 JWT token:", token ? "exists" : "missing");
+    // console.log("🍪 JWT token:", token ? "exists" : "missing");
 
     if (!token) {
       // console.log("❌ No JWT token");
@@ -139,7 +139,7 @@ export class AuthResolver {
       return null;
     }
 
-    console.log("Payload: ", payload);
+    // console.log("Payload: ", payload);
     const userId = parseInt(payload.userId);
     // console.log("✅ User ID from JWT:", userId);
 

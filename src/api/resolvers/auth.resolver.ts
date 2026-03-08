@@ -41,8 +41,8 @@ export class CustomAuthResolver {
     @Ctx() ctx: RequestContext,
     @Args() args: { email: string; password: string },
   ) {
-    console.log("🔐 Custom login attempt:", args.email);
-    console.log("🔐 gọi ở đây nè", args.email);
+    // console.log("🔐 Custom login attempt:", args.email);
+    // console.log("🔐 gọi ở đây nè", args.email);
 
     try {
       // 1. ✅ Find user with authentication method
@@ -63,7 +63,7 @@ export class CustomAuthResolver {
         };
       }
 
-      console.log("✅ User found:", user.id);
+      // console.log("✅ User found:", user.id);
 
       // 2. ✅ Get native auth method (contains password hash)
       const nativeAuthMethod = user.authenticationMethods.find(
@@ -94,7 +94,7 @@ export class CustomAuthResolver {
         };
       }
 
-      console.log("✅ Password verified");
+      // console.log("✅ Password verified");
 
       // 4. ✅ Get customer
       const customer = await this.connection
@@ -112,7 +112,7 @@ export class CustomAuthResolver {
         };
       }
 
-      console.log("✅ Customer found:", customer.id);
+      // console.log("✅ Customer found:", customer.id);
 
       // 5. ✅ GENERATE JWT TOKEN
       const token = jwtService.generateToken({
@@ -121,7 +121,7 @@ export class CustomAuthResolver {
         type: "customer",
       });
 
-      console.log("🎟️ JWT Token generated:", token.substring(0, 20) + "...");
+      // console.log("🎟️ JWT Token generated:", token.substring(0, 20) + "...");
 
       // 6. ✅ SET COOKIE
       const { res } = getRequestResponse(ctx);
@@ -181,7 +181,7 @@ export class CustomAuthResolver {
       return null;
     }
 
-    console.log("✅ Token verified:", payload);
+    // console.log("✅ Token verified:", payload);
 
     const customer = await this.connection
       .getRepository(ctx, Customer)
@@ -213,7 +213,7 @@ export class CustomAuthResolver {
         path: "/",
       });
 
-      console.log("🔓 User logged out");
+      // console.log("🔓 User logged out");
     }
 
     return {

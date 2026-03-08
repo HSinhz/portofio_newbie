@@ -40,7 +40,17 @@ export class ProductsCacheService {
         filter: { enabled: { eq: true } }, // chỉ lấy sản phẩm đang bật
       },
       // Load các relation cần thiết
-      ["featuredAsset", "variants", "variants.productVariantPrices"],
+      [
+        "featuredAsset",
+        "assets",
+        "assets.asset",
+        "variants",
+        "variants.featuredAsset",
+        "variants.productVariantPrices",
+        "variants.assets",
+        "variants.assets.asset",
+        "variants.stockLevels",
+      ],
     );
 
     // ── Bước 3: Map sang DTO nhỏ gọn để cache ──────────────
@@ -49,11 +59,24 @@ export class ProductsCacheService {
       items: result.items.map((p) => ({
         id: String(p.id),
         name: p.name,
+        slug: p.slug ?? null,
         description: p.description,
         featuredAsset:
-          p.featuredAsset ? { source: p.featuredAsset.source } : null,
+          p.featuredAsset ?
+            { source: p.featuredAsset.source, preview: p.featuredAsset.preview }
+          : null,
+        assets: (p.assets ?? []).map((a) => ({
+          source: a.asset?.source,
+          preview: a.asset?.preview,
+        })),
         variants: (p.variants ?? []).map((v) => ({
           id: String(v.id),
+          name: v.name ?? null,
+          sku: v.sku,
+          stockLevel:
+            v.stockLevels?.[0]?.stockOnHand != null ?
+              String(v.stockLevels[0].stockOnHand)
+            : null,
           // Lấy price từ bảng ProductVariantPrice (hỗ trợ multi-channel)
           price:
             v.productVariantPrices?.find(
@@ -61,6 +84,17 @@ export class ProductsCacheService {
             )?.price ??
             v.productVariantPrices?.[0]?.price ??
             0,
+          featuredAsset:
+            v.featuredAsset ?
+              {
+                source: v.featuredAsset.source,
+                preview: v.featuredAsset.preview,
+              }
+            : null,
+          assets: (v.assets ?? []).map((a) => ({
+            source: a.asset?.source,
+            preview: a.asset?.preview,
+          })),
         })),
       })),
     };

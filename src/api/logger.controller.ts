@@ -20,7 +20,7 @@ export class LoggerController {
     // Tạo folder logs nếu chưa có
     if (!fs.existsSync(this.LOG_DIR)) {
       fs.mkdirSync(this.LOG_DIR, { recursive: true });
-      console.log(`✅ Created log directory: ${this.LOG_DIR}`);
+      // console.log(`✅ Created log directory: ${this.LOG_DIR}`);
     }
   }
 
@@ -56,7 +56,7 @@ Message: ${logData.message}
       // Append to file
       fs.appendFileSync(filePath, logContent, "utf8");
 
-      console.log(`✅ Error logged to: ${filePath}`);
+      // console.log(`✅ Error logged to: ${filePath}`);
 
       return { success: true, filePath, fileName };
     } catch (error) {
@@ -92,16 +92,16 @@ Message: ${logData.message}
             if (diffDays > daysToKeep) {
               fs.unlinkSync(path.join(this.LOG_DIR, file));
               deletedCount++;
-              console.log(`🗑️ Deleted old log: ${file}`);
+              // console.log(`🗑️ Deleted old log: ${file}`);
             }
           }
         }
       });
 
-      console.log(`✅ Cleared ${deletedCount} old log files`);
+      // console.log(`✅ Cleared ${deletedCount} old log files`);
       return { success: true, deletedCount };
     } catch (error) {
-      console.error("❌ Failed to clear old logs:", error);
+      console.error("❌ clearOldLogs: Failed to clear old logs:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),

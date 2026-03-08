@@ -141,9 +141,9 @@ export class AuthService {
       }
 
       // ✅ 2. Hash password
-      console.log("🔐 Hashing password...");
+      // console.log("🔐 Hashing password...");
       const passwordHash = await bcrypt.hash(input.password, 10);
-      console.log("✅ Password hashed:", passwordHash.substring(0, 10) + "...");
+      // console.log("✅ Password hashed:", passwordHash.substring(0, 10) + "...");
 
       // ✅ 3. Create User
       const user = new User({
@@ -155,7 +155,7 @@ export class AuthService {
       const savedUser = await this.connection
         .getRepository(ctx, User)
         .save(user);
-      console.log("✅ User created with ID:", savedUser.id);
+      // console.log("✅ User created with ID:", savedUser.id);
 
       // ✅ 4. Create NativeAuthenticationMethod
       const authMethod = new NativeAuthenticationMethod({
@@ -168,7 +168,7 @@ export class AuthService {
         .getRepository(ctx, NativeAuthenticationMethod)
         .save(authMethod);
 
-      console.log("✅ Auth method created:", savedAuthMethod.id);
+      // console.log("✅ Auth method created:", savedAuthMethod.id);
 
       // ✅ 5. Create Customer
       const customer = new Customer({
@@ -179,7 +179,7 @@ export class AuthService {
       customer.user = savedUser;
 
       await this.connection.getRepository(ctx, Customer).save(customer);
-      console.log("✅ Customer created");
+      // console.log("✅ Customer created");
 
       // ✅ 6. Assign customer role
       const customerRole = await this.connection
@@ -191,12 +191,12 @@ export class AuthService {
       if (customerRole) {
         savedUser.roles = [customerRole];
         await this.connection.getRepository(ctx, User).save(savedUser);
-        console.log("✅ Customer role assigned");
+        // console.log("✅ Customer role assigned");
       } else {
         console.warn("⚠️ Customer role not found");
       }
 
-      console.log("✅ User registered successfully:", savedUser.identifier);
+      // console.log("✅ User registered successfully:", savedUser.identifier);
 
       // ✅ 7. Load full user with relations
       const fullUser = await this.connection.getRepository(ctx, User).findOne({
