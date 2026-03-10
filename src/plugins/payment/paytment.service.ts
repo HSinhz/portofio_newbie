@@ -213,7 +213,8 @@ export class PaymentService {
     console.log("🛒 [PaymentService] placeOrder called", { input });
 
     // ── Bước 0: Xác thực user ──────────────────
-    const userId = ctx.activeUserId || this.getUserIdFromRequest(ctx);
+    // Ưu tiên JWT custom (auth_token) trước ctx.activeUserId tránh admin session bleeding
+    const userId = this.getUserIdFromRequest(ctx) || ctx.activeUserId;
     if (!userId) {
       console.warn("❌ [PaymentService] User not authenticated");
       return { success: false, message: "Bạn cần đăng nhập để đặt hàng" };

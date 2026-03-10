@@ -78,10 +78,12 @@ export class CartService {
 
     // console.log(`🔍 [CartService] userId raw="${userId}" → numeric=${numericId}`);
 
+    console.log(`🔍 find userId=${numericId}...`);
     const customer = await customerRepo.findOne({
       where: { user: { id: numericId as any } },
     });
 
+    console.log("customer = ", customer);
     if (!customer) {
       // console.log(`❌ [CartService] No customer for userId=${numericId}`);
       throw new Error("Không tìm thấy thông tin khách hàng cho tài khoản này");
@@ -103,7 +105,11 @@ export class CartService {
   // Mỗi user chỉ có 1 giỏ hàng active tại 1 thời điểm.
   // ─────────────────────────────────────────────
   private async getOrCreateActiveOrder(ctx: RequestContext): Promise<Order> {
-    const userId = ctx.activeUserId || this.getUserIdFromRequest(ctx);
+    // Ưu tiên JWT custom (auth_token cookie) trước ctx.activeUserId
+    // Lý do: khi chạy local, cookie session admin (localhost:3000) bị browser gửi kèm
+    // vào request của frontend (localhost:5173 → proxy → localhost:3000),
+    // khiến ctx.activeUserId = superadmin ID thay vì customer ID.
+    const userId = this.getUserIdFromRequest(ctx) || ctx.activeUserId;
     if (!userId) {
       throw new Error("Bạn cần đăng nhập để sử dụng giỏ hàng");
     }
