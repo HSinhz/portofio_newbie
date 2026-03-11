@@ -204,6 +204,40 @@ export class CartService {
   }
 
   // ─────────────────────────────────────────────
+  // Public: Lấy giỏ hàng active (không tạo mới)
+  // ─────────────────────────────────────────────
+  async getActiveOrderForUser(ctx: RequestContext): Promise<Order | null> {
+    const userId = this.getUserIdFromRequest(ctx) || ctx.activeUserId;
+    if (!userId) return null;
+
+    let customer: Customer;
+    try {
+      customer = await this.getCustomerByUserId(ctx, userId);
+    } catch {
+      return null;
+    }
+
+    const orderRepo = this.connection.getRepository(ctx, Order);
+    const order = await orderRepo.findOne({
+      where: {
+        customerId: customer.id as any,
+        active: true,
+        state: "AddingItems" as any,
+      },
+      relations: [
+        "lines",
+        "lines.productVariant",
+        "lines.productVariant.featuredAsset",
+        "lines.productVariant.product",
+        "lines.productVariant.product.featuredAsset",
+        "lines.featuredAsset",
+      ],
+    });
+
+    return order ?? null;
+  }
+
+  // ─────────────────────────────────────────────
   // Public: Thêm sản phẩm vào giỏ hàng
   //
   // Flow:
