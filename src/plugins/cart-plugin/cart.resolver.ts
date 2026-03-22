@@ -24,4 +24,37 @@ export class CartResolver {
       args.quantity,
     );
   }
+
+  @Transaction()
+  @Mutation()
+  async customAdjustOrderLine(
+    @Ctx() ctx: RequestContext,
+    @Args()
+    args: { orderID: string; orderLineId: string; quantity: number },
+  ) {
+    console.log("ctx", ctx);
+    console.log("CartResolver.adjustOrderLine called with args:", args);
+    return this.cartService.adjustOrderLineQuantity(
+      ctx,
+      args.orderID,
+      args.orderLineId,
+      args.quantity,
+    );
+  }
+
+  @Transaction()
+  @Mutation()
+  async customDeleteOrderLine(
+    @Ctx() ctx: RequestContext,
+    @Args()
+    args: { orderID: string; orderLineId: string },
+  ) {
+    console.log("ctx", ctx);
+    console.log("CartResolver.adjustOrderLine called with args:", args);
+    return this.cartService.customDeleteOrderLine(
+      ctx,
+      args.orderID,
+      args.orderLineId,
+    );
+  }
 }

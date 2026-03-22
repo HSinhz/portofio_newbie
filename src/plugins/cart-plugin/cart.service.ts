@@ -380,4 +380,197 @@ export class CartService {
 
     return finalOrder;
   }
+
+  // ─────────────────────────────────────────────
+  // Public: Cập nhật số lượng của OrderLine theo orderId
+  //
+  // Flow:
+  //   1. Xác nhận orderId thuộc về user hiện tại
+  //   2. Tìm OrderLine theo productVariantId trong order
+  //   3. Cập nhật quantity
+  //   4. Recalculate subTotal
+  //   5. Load Order với relations
+  // ─────────────────────────────────────────────
+  async adjustOrderLineQuantity(
+    ctx: RequestContext,
+    orderId: ID,
+    orderLineId: ID,
+    quantity: number,
+  ): Promise<Order> {
+    console.log(
+      "vào rồi, orderId:",
+      orderId,
+      "orderLineId:",
+      orderLineId,
+      "quantity:",
+      quantity,
+    );
+
+    if (quantity < 1) {
+      throw new Error("Số lượng phải ít nhất là 1");
+    }
+
+    // ── Bước 1: Xác nhận orderId thuộc về user ──
+    const userId = this.getUserIdFromRequest(ctx) || ctx.activeUserId;
+    if (!userId) {
+      throw new Error("Bạn cần đăng nhập");
+    }
+
+    const customer = await this.getCustomerByUserId(ctx, userId);
+    const orderRepo = this.connection.getRepository(ctx, Order);
+
+    const order = await orderRepo.findOne({
+      where: {
+        id: orderId as any,
+        customerId: customer.id as any,
+        active: true,
+        state: "AddingItems" as any,
+      },
+      relations: ["lines"],
+    });
+
+    if (!order) {
+      throw new Error(
+        "Không tìm thấy giỏ hàng hoặc bạn không có quyền truy cập",
+      );
+    }
+
+    // ── Bước 2: Tìm OrderLine theo orderLineId ──
+    const orderLineRepo = this.connection.getRepository(ctx, OrderLine);
+    const orderLine = await orderLineRepo.findOne({
+      where: {
+        id: orderLineId as any,
+        order: { id: order.id as any },
+      },
+    });
+
+    if (!orderLine) {
+      throw new Error("Sản phẩm này không có trong giỏ hàng của bạn");
+    }
+
+    // ── Bước 3: Cập nhật quantity ──
+    await orderLineRepo.update(orderLine.id as any, { quantity });
+    console.log(
+      `🔄 [CartService] Updated line ${orderLineId} quantity to: ${quantity}`,
+    );
+
+    // ── Bước 4: Recalculate subTotal ──
+    const allLines = await orderLineRepo.find({
+      where: { order: { id: order.id as any } },
+    });
+    const subTotal = allLines.reduce((sum, line) => {
+      const lineQuantity = line.id === orderLine.id ? quantity : line.quantity;
+      return sum + line.listPrice * lineQuantity;
+    }, 0);
+
+    await orderRepo.update(order.id as any, {
+      subTotal,
+      subTotalWithTax: subTotal,
+    });
+
+    // ── Bước 5: Load Order với relations ──
+    const finalOrder = await orderRepo.findOne({
+      where: { id: order.id as any },
+      relations: [
+        "lines",
+        "lines.productVariant",
+        "lines.productVariant.product",
+        "lines.productVariant.product.featuredAsset",
+        "lines.featuredAsset",
+      ],
+    });
+
+    if (!finalOrder) {
+      throw new Error("Không thể load lại order sau khi cập nhật");
+    }
+
+    console.log(
+      `✅ [CartService] Order ${finalOrder.code} updated: subTotal: ${finalOrder.subTotal}`,
+    );
+
+    return finalOrder;
+  }
+
+  async customDeleteOrderLine(
+    ctx: RequestContext,
+    orderId: ID,
+    orderLineId: ID,
+  ): Promise<Order> {
+    // ── Bước 1: Xác nhận orderId thuộc về user ──
+    const userId = this.getUserIdFromRequest(ctx) || ctx.activeUserId;
+    if (!userId) {
+      throw new Error("Bạn cần đăng nhập");
+    }
+
+    const customer = await this.getCustomerByUserId(ctx, userId);
+    const orderRepo = this.connection.getRepository(ctx, Order);
+
+    const order = await orderRepo.findOne({
+      where: {
+        id: orderId as any,
+        customerId: customer.id as any,
+        active: true,
+        state: "AddingItems" as any,
+      },
+      relations: ["lines"],
+    });
+
+    if (!order) {
+      throw new Error(
+        "Không tìm thấy giỏ hàng hoặc bạn không có quyền truy cập",
+      );
+    }
+
+    // ── Bước 2: Tìm OrderLine theo orderLineId ──
+    const orderLineRepo = this.connection.getRepository(ctx, OrderLine);
+    const orderLine = await orderLineRepo.findOne({
+      where: {
+        id: orderLineId as any,
+        order: { id: order.id as any },
+      },
+    });
+
+    if (!orderLine) {
+      throw new Error("Sản phẩm này không có trong giỏ hàng của bạn");
+    }
+
+    // ── Bước 3: Xóa OrderLine ──
+    console.log("🔍 [CartService] Deleting order line: ", orderLine.id);
+    await orderLineRepo.delete(orderLine.id as any);
+
+    // ── Bước 4: Recalculate subTotal (bỏ qua line vừa xóa) ──
+    const remainingLines = await orderLineRepo.find({
+      where: { order: { id: order.id as any } },
+    });
+    const subTotal = remainingLines.reduce(
+      (sum, line) => sum + line.listPrice * line.quantity,
+      0,
+    );
+    await orderRepo.update(order.id as any, {
+      subTotal,
+      subTotalWithTax: subTotal,
+    });
+
+    // ── Bước 5: Load Order với relations ──
+    const finalOrder = await orderRepo.findOne({
+      where: { id: order.id as any },
+      relations: [
+        "lines",
+        "lines.productVariant",
+        "lines.productVariant.product",
+        "lines.productVariant.product.featuredAsset",
+        "lines.featuredAsset",
+      ],
+    });
+
+    if (!finalOrder) {
+      throw new Error("Không thể load lại order sau khi cập nhật");
+    }
+
+    console.log(
+      `✅ [CartService] Order ${finalOrder.code} updated: subTotal: ${finalOrder.subTotal}`,
+    );
+
+    return finalOrder;
+  }
 }

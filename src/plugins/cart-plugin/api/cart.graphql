@@ -5,4 +5,6 @@ extend type Query {
 
 extend type Mutation {
   customAddItemToOrder(productVariantId: ID!, quantity: Int!): Order!
+  customAdjustOrderLine(orderID: ID!, orderLineId: ID!, quantity: Int!): Order!
+  customDeleteOrderLine(orderID: ID!, orderLineId: ID!): Order!
 }
