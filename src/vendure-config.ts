@@ -21,6 +21,13 @@ import { AuthPlugin } from "./plugins/auth/auth.plugin";
 import { CartPlugin } from "./plugins/cart-plugin/cart.plugin";
 import { PaymentPlugin } from "./plugins/payment/payment.plugin";
 import { ProductsCachePlugin } from "./plugins/products-cache/products-cache.plugin";
+import { codPaymentHandler } from "./plugins/payment-gateway/handlers/cod.handler";
+// ── Payment System Plugins ─────────────────────────────────────────────────────
+import { PaymentGatewayPlugin } from "./plugins/payment-gateway/payment-gateway.plugin";
+import { FraudDetectionPlugin } from "./plugins/fraud-detection/fraud-detection.plugin";
+import { WalletPlugin } from "./plugins/wallet/wallet.plugin";
+import { LedgerPlugin } from "./plugins/ledger/ledger.plugin";
+import { RefundPlugin } from "./plugins/refund/refund.plugin";
 import "dotenv/config";
 import path from "path";
 // import * as cookieParser from "cookie-parser";
@@ -125,7 +132,7 @@ export const config: VendureConfig = {
     password: process.env.DB_PASSWORD,
   },
   paymentOptions: {
-    paymentMethodHandlers: [dummyPaymentHandler],
+    paymentMethodHandlers: [dummyPaymentHandler, codPaymentHandler],
   },
 
   // ✅ THÊM orderOptions
@@ -175,5 +182,11 @@ export const config: VendureConfig = {
     PaymentPlugin,
     ProductsCachePlugin, // ✅ Redis cache cho danh sách sản phẩm
     // CustomAuthPlugin,
+    // ── Payment System ────────────────────────────
+    PaymentGatewayPlugin,   // gateway abstraction (MoMo, VNPay, Stripe...)
+    FraudDetectionPlugin,   // chống gian lận
+    WalletPlugin,           // ví nội bộ
+    LedgerPlugin,           // lịch sử giao dịch (double-entry)
+    RefundPlugin,           // hoàn tiền
   ],
 };

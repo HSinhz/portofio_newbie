@@ -1,0 +1,34 @@
+extend type Query {
+  """Danh sách yêu cầu hoàn tiền của user"""
+  myRefunds: [RefundRequest!]!
+}
+
+extend type Mutation {
+  """User gửi yêu cầu hoàn tiền"""
+  requestRefund(input: RequestRefundInput!): RefundResult!
+}
+
+input RequestRefundInput {
+  orderId: ID!
+  amount: Int!
+  reason: String!
+  refundTo: String
+}
+
+type RefundRequest {
+  id: ID!
+  orderId: String!
+  amount: Int!
+  type: String!
+  status: String!
+  reason: String!
+  refundTo: String!
+  createdAt: String!
+}
+
+type RefundResult {
+  success: Boolean!
+  refundId: ID
+  status: String
+  message: String!
+}

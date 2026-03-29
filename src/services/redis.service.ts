@@ -53,4 +53,14 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async keys(pattern: string): Promise<string[]> {
     return this.client.keys(pattern);
   }
+
+  /**
+   * SET nếu key chưa tồn tại (atomic).
+   * Trả về true  → set thành công (request đầu tiên)
+   * Trả về false → key đã tồn tại (duplicate request)
+   */
+  async setNX(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+    const result = await this.client.set(key, value, "EX", ttlSeconds, "NX");
+    return result === "OK";
+  }
 }

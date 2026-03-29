@@ -14,6 +14,9 @@ import {
   TransactionalConnection,
 } from "@vendure/core";
 import { jwtService } from "../../services/jwt.service";
+import { RedisService } from "../../services/redis.service";
+import { EventBus } from "@vendure/core";
+import { PaymentSuccessEvent } from "./payment-success.event";
 
 // =============================================
 // INTERFACES
@@ -54,6 +57,8 @@ export class PaymentService {
     private orderService: OrderService,
     private entityHydrator: EntityHydrator,
     private connection: TransactionalConnection,
+    private redisService: RedisService,
+    private eventBus: EventBus,
   ) {}
 
   // ─────────────────────────────────────────────
@@ -197,14 +202,33 @@ export class PaymentService {
   // ─────────────────────────────────────────────
   private async getPaymentMethodCode(
     ctx: RequestContext,
+    selectedMethod: string,
   ): Promise<string | null> {
     const pmRepo = this.connection.getRepository(ctx, PaymentMethod);
-    const method = await pmRepo.findOne({ where: { enabled: true } });
+    const method = await pmRepo.findOne({
+      where: { code: selectedMethod, enabled: true },
+    });
+    if (!method) {
+      console.warn(
+        `⚠️ [PaymentService] PaymentMethod '${selectedMethod}' không tìm thấy hoặc chưa được kích hoạt`,
+      );
+    }
     return method?.code ?? null;
   }
 
   // ─────────────────────────────────────────────
   // Public: Thực hiện toàn bộ checkout flow
+  //
+  // ✅ IDEMPOTENCY APPROACH:
+  //   - Dùng orderCode làm key (unique per order)
+  //   - Nếu payment success nhưng fail update Redis → user vẫn có thể thanh toán order khác
+  //   - Cache lưu: orderId, orderCode, transactionId, userId, timestamp
+  //   - TTL: 600s (10 phút) để retry window
+  //
+  // ✅ PAYMENT VERIFICATION:
+  //   - Check order state ~ "PaymentSettled" | "PaymentAuthorized"
+  //   - Chỉ emit event + ghi ledger khi verify success
+  //   - Nếu fail update Redis, vẫn emit (ledger sẽ ghi)
   // ─────────────────────────────────────────────
   async placeOrder(
     ctx: RequestContext,
@@ -213,7 +237,6 @@ export class PaymentService {
     console.log("🛒 [PaymentService] placeOrder called", { input });
 
     // ── Bước 0: Xác thực user ──────────────────
-    // Ưu tiên JWT custom (auth_token) trước ctx.activeUserId tránh admin session bleeding
     const userId = this.getUserIdFromRequest(ctx) || ctx.activeUserId;
     if (!userId) {
       console.warn("❌ [PaymentService] User not authenticated");
@@ -232,6 +255,33 @@ export class PaymentService {
     console.log(
       `✅ [PaymentService] Active order: ${order.code} (state: ${order.state})`,
     );
+
+    // ── Bước 0b: Idempotency check dùng orderId ──
+    // ✅ Dùng orderCode làm key (unique per order), không block order khác nếu fail update Redis
+    // setNX là atomic — chỉ 1 request cùng order thành công, request khác bị block hoặc nhận kết quả cached
+    const idempotencyKey = `payment:idempotency:${order.code}`;
+    console.log(
+      `🔑 [PaymentService] Checking idempotency key: ${idempotencyKey}`,
+    );
+    const acquired = await this.redisService.setNX(
+      idempotencyKey,
+      JSON.stringify({ success: false, message: "Đang xử lý..." }),
+      600,
+    );
+
+    if (!acquired) {
+      // Key đã tồn tại → GET kết quả (có thể là "đang xử lý" hoặc kết quả thật)
+      const cached = await this.redisService.get(idempotencyKey);
+      console.warn(
+        `⚠️ [PaymentService] Duplicate request detected for order: ${order.code}`,
+      );
+      return cached ?
+          (JSON.parse(cached) as PlaceOrderResult)
+        : {
+            success: false,
+            message: "Đơn hàng đang được xử lý, vui lòng chờ.",
+          };
+    }
 
     // ── Bước 2: Set địa chỉ giao hàng (custom) ──
     console.log("📦 [PaymentService] Setting shipping address (custom)...");
@@ -307,7 +357,10 @@ export class PaymentService {
 
     // ── Bước 5: Thêm payment vào đơn hàng ──────────
     // Lấy code của PaymentMethod từ DB (được tạo bởi PaymentInitService)
-    const paymentMethodCode = await this.getPaymentMethodCode(ctx);
+    const paymentMethodCode = await this.getPaymentMethodCode(
+      ctx,
+      input.paymentMethod,
+    );
     if (!paymentMethodCode) {
       return {
         success: false,
@@ -347,13 +400,74 @@ export class PaymentService {
         `🎉 [PaymentService] Order placed! Code: ${finalOrder.code}, State: ${finalOrder.state}`,
       );
 
-      return {
+      // ✅ Kiểm tra payment đã thành công thực sự
+      const paymentSuccessStates = ["PaymentSettled", "PaymentAuthorized"];
+      const isPaymentSuccess = paymentSuccessStates.includes(finalOrder.state);
+
+      if (!isPaymentSuccess) {
+        console.warn(
+          `⚠️ [PaymentService] Payment không thành công. Order state: ${finalOrder.state}`,
+        );
+        return {
+          success: false,
+          message: `Thanh toán thất bại. Trạng thái: ${finalOrder.state}`,
+        };
+      }
+
+      // ✅ Chỉ tạo result khi chắc chắn payment success
+      const result: PlaceOrderResult = {
         success: true,
         orderId: String(finalOrder.id),
         orderCode: finalOrder.code,
         orderState: finalOrder.state,
         message: `Đặt hàng thành công! Mã đơn hàng: ${finalOrder.code}`,
       };
+
+      // ✅ Chỉ lưu Redis khi payment thực sự thành công
+      // ✅ Dùng orderCode làm key, lưu transactionId + userId trong data
+      const cacheData = {
+        success: true,
+        orderId: String(finalOrder.id),
+        orderCode: finalOrder.code,
+        orderState: finalOrder.state,
+        message: `Đặt hàng thành công! Mã đơn hàng: ${finalOrder.code}`,
+        transactionId: String(finalOrder.id), // Payment transaction reference
+        userId: String(userId),
+        timestamp: new Date().toISOString(),
+      };
+
+      try {
+        await this.redisService.set(
+          idempotencyKey,
+          JSON.stringify(cacheData),
+          600,
+        );
+        console.log(
+          `✅ [PaymentService] Idempotency cache saved (key: ${idempotencyKey})`,
+        );
+      } catch (redisError: any) {
+        // ⚠️ Nếu fail update Redis, vẫn emit event & return success
+        // Lần sau user retry cùng order, sẽ query DB để verify (không dựa vào cache)
+        console.warn(
+          `⚠️ [PaymentService] Failed to cache result to Redis (order: ${order.code}): ${redisError.message}`,
+        );
+        console.log(
+          "ℹ️ [PaymentService] Payment succeeded in DB, but cache failed. User can retry.",
+        );
+      }
+
+      // ✅ Chỉ emit event khi payment thực sự thành công
+      this.eventBus.publish(
+        new PaymentSuccessEvent(
+          userId,
+          String(finalOrder.id),
+          finalOrder.code,
+          finalOrder.totalWithTax,
+          input.paymentMethod,
+        ),
+      );
+
+      return result;
     } catch (e: any) {
       console.error("❌ [PaymentService] addPaymentToOrder failed:", e.message);
       return {

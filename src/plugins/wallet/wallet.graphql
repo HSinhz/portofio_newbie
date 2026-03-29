@@ -1,0 +1,18 @@
+extend type Query {
+  """Lấy số dư ví của user đang đăng nhập"""
+  myWalletBalance: Int!
+}
+
+extend type Mutation {
+  """Nạp tiền vào ví (admin hoặc payment callback)"""
+  walletTopUp(amount: Int!, description: String): WalletResult!
+
+  """Thanh toán bằng ví"""
+  walletPay(orderId: ID!, amount: Int!): WalletResult!
+}
+
+type WalletResult {
+  success: Boolean!
+  balance: Int
+  message: String!
+}

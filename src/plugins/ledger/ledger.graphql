@@ -1,0 +1,16 @@
+extend type Query {
+  """Lịch sử giao dịch của user đang đăng nhập"""
+  myTransactionHistory(limit: Int, offset: Int): [TransactionEntry!]!
+}
+
+type TransactionEntry {
+  id: ID!
+  transactionId: String!
+  type: String!
+  amount: Int!
+  account: String!
+  description: String
+  paymentMethod: String
+  status: String!
+  createdAt: String!
+}

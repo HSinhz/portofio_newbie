@@ -8,17 +8,6 @@ import {
 import { LanguageCode } from "@vendure/common/lib/generated-types";
 import { PaymentMethodTranslation } from "@vendure/core/dist/entity/payment-method/payment-method-translation.entity";
 
-// =============================================
-// SERVICE: Tự động tạo PaymentMethod khi khởi động
-//
-// Vendure tách biệt:
-//   - PaymentMethodHandler: code xử lý (khai báo trong config)
-//   - PaymentMethod:        bản ghi trong DB, dùng handler trên
-//
-// addPaymentToOrder() cần PaymentMethod.code từ DB.
-// Service này đảm bảo bản ghi đó tồn tại khi server start.
-// =============================================
-
 @Injectable()
 export class PaymentInitService implements OnApplicationBootstrap {
   constructor(private connection: TransactionalConnection) {}
@@ -26,48 +15,40 @@ export class PaymentInitService implements OnApplicationBootstrap {
   async onApplicationBootstrap(): Promise<void> {
     const manager = this.connection.rawConnection.manager;
 
-    // ── Kiểm tra xem đã có PaymentMethod với code "dummy" chưa ──
     const existing = await manager.findOne(PaymentMethod, {
-      where: { code: "dummy" },
+      where: { code: "cod" },
     });
 
     if (existing) {
-      console.log("✅ [PaymentInit] PaymentMethod 'dummy' đã tồn tại, bỏ qua");
+      console.log("✅ [PaymentInit] PaymentMethod 'cod' đã tồn tại, bỏ qua");
       return;
     }
 
-    console.log("🔧 [PaymentInit] Chưa có PaymentMethod, đang tạo mới...");
+    console.log("🔧 [PaymentInit] Đang tạo PaymentMethod COD...");
 
-    // ── Lấy default channel để gắn vào PaymentMethod ──
-    // "__default_channel__" là code mặc định của channel chính trong Vendure
     const channel = await manager.findOne(Channel, {
       where: { code: "__default_channel__" },
     });
 
-    // ── Tạo PaymentMethod ──────────────────────────
-    // handler.code phải khớp với dummyPaymentHandler.code trong vendure-config.ts
-    // handler.args = [] vì dummy handler không cần tham số cấu hình
+    // handler.code phải khớp với codPaymentHandler.code trong vendure-config.ts
     const pm = manager.create(PaymentMethod, {
-      code: "dummy",
+      code: "cod",
       enabled: true,
-      handler: { code: "dummy-payment-handler", args: [] },
+      handler: { code: "cod", args: [] },
       checker: null,
     });
 
     const saved = await manager.save(pm);
 
-    // ── Tạo translation (tên hiển thị) ────────────
-    // PaymentMethod dùng i18n nên cần ít nhất 1 bản dịch
     const translation = manager.create(PaymentMethodTranslation, {
-      languageCode: LanguageCode.en,
-      name: "Dummy Payment",
-      description: "Development only — auto-created by PaymentInitService",
+      languageCode: LanguageCode.vi,
+      name: "Thanh toán khi nhận hàng (COD)",
+      description: "Thanh toán tiền mặt khi shipper giao hàng",
       base: saved,
     });
 
     await manager.save(translation);
 
-    // ── Gắn PaymentMethod với Channel ─────────────
     if (channel) {
       await manager
         .createQueryBuilder()
@@ -76,8 +57,6 @@ export class PaymentInitService implements OnApplicationBootstrap {
         .add(channel.id);
     }
 
-    console.log(
-      `✅ [PaymentInit] PaymentMethod 'dummy' đã được tạo (id: ${saved.id})`,
-    );
+    console.log(`✅ [PaymentInit] PaymentMethod 'cod' đã được tạo (id: ${saved.id})`);
   }
 }
