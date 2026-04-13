@@ -11,8 +11,10 @@
     "strict": true,
     "sourceMap": false,
     "skipLibCheck": true,
+    "rootDir": "./src",
     "outDir": "./dist",
-    "baseUrl": "./"
+    "baseUrl": "./",
+    "ignoreDeprecations": "6.0"
   },
   "exclude": [
     "node_modules",

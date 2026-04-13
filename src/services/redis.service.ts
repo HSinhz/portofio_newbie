@@ -59,8 +59,22 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
    * Trả về true  → set thành công (request đầu tiên)
    * Trả về false → key đã tồn tại (duplicate request)
    */
-  async setNX(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+  async setNX(
+    key: string,
+    value: string,
+    ttlSeconds: number,
+  ): Promise<boolean> {
     const result = await this.client.set(key, value, "EX", ttlSeconds, "NX");
     return result === "OK";
+  }
+
+  /** Lấy TTL của key (giây). Trả về -1 nếu không có expiry, -2 nếu key không tồn tại. */
+  async getTTL(key: string): Promise<number> {
+    return this.client.ttl(key);
+  }
+
+  /** Increment giá trị của key (dùng cho counter). */
+  async incr(key: string): Promise<number> {
+    return this.client.incr(key);
   }
 }

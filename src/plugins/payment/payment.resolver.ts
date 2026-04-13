@@ -1,7 +1,11 @@
 // src/plugins/payment/payment.resolver.ts
 import { Args, Mutation, Resolver } from "@nestjs/graphql";
 import { Ctx, RequestContext, Transaction } from "@vendure/core";
-import { PaymentService, PlaceOrderInput, PlaceOrderResult } from "./paytment.service";
+import {
+  PaymentService,
+  PlaceOrderInput,
+  PlaceOrderResult,
+} from "./paytment.service";
 
 @Resolver()
 export class PaymentResolver {
