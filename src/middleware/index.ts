@@ -1,6 +1,9 @@
 // src/middleware/index.ts
 import { cartLoggerMiddleware } from "./cart-logger.middleware";
 import { rateLimitMiddleware } from "./rate-limit.middleware";
+import { securityHeadersMiddleware } from "./security-headers.middleware";
+import { csrfProtectionMiddleware } from "./csrf-protection.middleware";
+import { graphQLDoSProtectionMiddleware } from "./graphql-dos-protection.middleware";
 import { RedisService } from "../services/redis.service";
 import { RateLimitService } from "../services/rate-limit.service";
 import { Request, Response, NextFunction } from "express"; // ← ADD THIS
@@ -46,6 +49,30 @@ async function getRateLimitService(): Promise<RateLimitService> {
 }
 
 export const middlewares = [
+  // ✅ Security Headers (must be early in middleware chain)
+  {
+    route: "*",
+    handler: securityHeadersMiddleware,
+    beforeListen: true,
+  },
+  // ✅ CSRF Protection (after security headers, before rate limiting)
+  {
+    route: "*",
+    handler: csrfProtectionMiddleware,
+    beforeListen: true,
+  },
+  // ✅ GraphQL DoS Protection (prevents query depth/complexity attacks)
+  {
+    route: "*",
+    handler: graphQLDoSProtectionMiddleware({
+      maxDepth: 15,
+      maxComplexity: 5000,
+      maxQueryLength: 50000,
+      maxAliases: 30,
+      verbose: process.env.APP_ENV === "dev",
+    }),
+    beforeListen: true,
+  },
   {
     route: "shop-api",
     handler: async (req: Request, res: Response, next: NextFunction) => {
