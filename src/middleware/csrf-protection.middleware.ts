@@ -13,15 +13,6 @@
 import { Request, Response, NextFunction } from "express";
 import crypto from "crypto";
 
-// Extended Request type to include CSRF token
-declare global {
-  namespace Express {
-    interface Request {
-      csrfToken?: () => string;
-    }
-  }
-}
-
 // CSRF Token Storage (in-memory for demo, use Redis in production)
 const tokenStore = new Map<string, string>();
 
